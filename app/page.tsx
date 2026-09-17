@@ -13,28 +13,20 @@ type Result = {
 
 const DELIM = /[\s。、！？,.!?「」【】『』\n（）〔〕]/
 
-/** テキストエリアの選択範囲またはカーソル直前のセグメントを返す */
 function detectWord(
   text: string,
   selStart: number,
   selEnd: number,
 ): { word: string; start: number } {
-  // 選択テキストを優先
   if (selStart !== selEnd) {
     return { word: text.substring(selStart, selEnd), start: selStart }
   }
-  // 直前のデリミタからカーソルまでのセグメント
   const before = text.substring(0, selStart)
   const match = before.match(/[^\s。、！？,.!?「」【】『』\n（）〔〕]+$/)
   if (!match) return { word: '', start: selStart }
   const word = match[0]
-  // 8文字超は自動検索しない（文全体を検索してしまうのを防ぐ）
   if (word.length > 8) return { word: '', start: selStart }
   return { word, start: selStart - word.length }
-}
-
-function escapeRegex(s: string) {
-  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 }
 
 export default function Home() {
@@ -43,8 +35,11 @@ export default function Home() {
   const [currentWord, setCurrentWord] = useState('')
   const [wordStart, setWordStart] = useState(0)
   const [loading, setLoading] = useState(false)
+  const [composing, setComposing] = useState(false)
+
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const debounceRef = useRef<ReturnType<typeof setTimeout>>()
+  const compositionStartPosRef = useRef(0)
 
   const fetchSuggestion = useCallback(async (word: string) => {
     if (!word || word.length < 2) { setResult(null); return }
@@ -61,26 +56,53 @@ export default function Home() {
     }
   }, [])
 
-  function updateWord(ta: HTMLTextAreaElement, value: string) {
-    const { word, start } = detectWord(value, ta.selectionStart, ta.selectionEnd)
+  function scheduleSearch(word: string, start: number, delay = 500) {
     setCurrentWord(word)
     setWordStart(start)
-    if (!word) { setResult(null); return }
-    const delay = ta.selectionStart !== ta.selectionEnd ? 200 : 500
     clearTimeout(debounceRef.current)
+    if (!word) { setResult(null); return }
     debounceRef.current = setTimeout(() => fetchSuggestion(word), delay)
   }
 
+  // ── 通常の変更（非IME）──────────────────────────────
   function handleChange(e: React.ChangeEvent<HTMLTextAreaElement>) {
     const v = e.target.value
     setText(v)
-    updateWord(e.target, v)
+    if (composing) return  // IME中は compositionUpdate に任せる
+    const { word, start } = detectWord(v, e.target.selectionStart, e.target.selectionEnd)
+    scheduleSearch(word, start, e.target.selectionStart !== e.target.selectionEnd ? 200 : 500)
   }
 
   function handleSelect(e: React.SyntheticEvent<HTMLTextAreaElement>) {
-    updateWord(e.currentTarget, text)
+    if (composing) return
+    const ta = e.currentTarget
+    const { word, start } = detectWord(text, ta.selectionStart, ta.selectionEnd)
+    scheduleSearch(word, start, ta.selectionStart !== ta.selectionEnd ? 200 : 500)
   }
 
+  // ── IME コンポジション ────────────────────────────────
+  function handleCompositionStart(e: React.CompositionEvent<HTMLTextAreaElement>) {
+    setComposing(true)
+    compositionStartPosRef.current = e.currentTarget.selectionStart
+    clearTimeout(debounceRef.current)
+  }
+
+  function handleCompositionUpdate(e: React.CompositionEvent<HTMLTextAreaElement>) {
+    const word = e.data
+    if (!word) return
+    // コンポジション文字列（ひらがな等）でリアルタイム検索
+    scheduleSearch(word, compositionStartPosRef.current, 350)
+  }
+
+  function handleCompositionEnd(e: React.CompositionEvent<HTMLTextAreaElement>) {
+    setComposing(false)
+    const committed = e.data   // 確定した文字列（漢字変換後）
+    const start = compositionStartPosRef.current
+    // 確定後も同じ位置で検索（変換前と結果が違う場合もあるので再検索）
+    scheduleSearch(committed, start, 100)
+  }
+
+  // ── 置換 ───────────────────────────────────────────
   function accept(replacement: string) {
     const ta = textareaRef.current
     if (!ta) return
@@ -97,7 +119,7 @@ export default function Home() {
   }
 
   function handleKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
-    if (e.key === 'Tab' && result) {
+    if (e.key === 'Tab' && result && !composing) {
       e.preventDefault()
       accept(result.longest)
     }
@@ -110,7 +132,9 @@ export default function Home() {
         <p className="text-gray-400 text-sm mt-1">
           書きながら類語を自動検索 →&nbsp;
           <span className="sm:hidden">タップ</span>
-          <span className="hidden sm:inline">タップ or <kbd className="bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded text-xs font-mono">Tab</kbd></span>
+          <span className="hidden sm:inline">
+            タップ or <kbd className="bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded text-xs font-mono">Tab</kbd>
+          </span>
           &nbsp;で長い表現に置換
         </p>
       </div>
@@ -123,22 +147,38 @@ export default function Home() {
         onClick={handleSelect}
         onKeyUp={handleSelect}
         onKeyDown={handleKeyDown}
+        onCompositionStart={handleCompositionStart}
+        onCompositionUpdate={handleCompositionUpdate}
+        onCompositionEnd={handleCompositionEnd}
         placeholder="ここに文章を書いてください…"
         className="w-full h-52 px-4 py-3 border border-gray-300 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white resize-none text-base leading-relaxed"
         autoFocus
       />
 
       {/* Suggestion bar */}
-      <div className="mt-2 h-14 flex items-center">
+      <div className="mt-2 min-h-[3.5rem] flex items-center">
         {loading && (
           <p className="text-sm text-gray-400 animate-pulse">検索中…</p>
         )}
         {!loading && result && (
-          <div className="flex items-center gap-3 bg-blue-50 border border-blue-200 rounded-xl px-4 py-2.5 w-full">
-            <span className="text-gray-500 text-sm shrink-0">「{currentWord}」→</span>
+          <div className={`flex items-center gap-3 rounded-xl px-4 py-2.5 w-full border ${
+            composing
+              ? 'bg-amber-50 border-amber-200'   // 変換前：黄色
+              : 'bg-blue-50 border-blue-200'      // 確定後：青
+          }`}>
+            <span className="text-gray-500 text-sm shrink-0">
+              「{currentWord}」→
+              {composing && (
+                <span className="ml-1 text-amber-500 text-xs">変換前</span>
+              )}
+            </span>
             <button
               onClick={() => accept(result.longest)}
-              className="text-blue-700 font-bold text-lg hover:text-blue-900 active:scale-95 transition-all truncate underline decoration-dotted underline-offset-2"
+              className={`font-bold text-lg active:scale-95 transition-all truncate underline decoration-dotted underline-offset-2 ${
+                composing
+                  ? 'text-amber-700 hover:text-amber-900'
+                  : 'text-blue-700 hover:text-blue-900'
+              }`}
               title="タップ / Tab で置換"
             >
               {result.longest}
