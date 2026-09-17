@@ -42,6 +42,7 @@ export default function Home() {
   useEffect(() => { setMounted(true) }, [])
 
   function clearAll() {
+    if (!window.confirm('全て消去しますか？')) return
     setText('')
     setResult(null)
     setCurrentWord('')
@@ -175,7 +176,7 @@ export default function Home() {
         <button
           onClick={clearAll}
           disabled={mounted ? !text : false}
-          className="text-xs text-red-400 hover:text-red-600 disabled:opacity-30 disabled:cursor-not-allowed transition-colors px-2 py-1 rounded hover:bg-red-50"
+          className="text-sm font-medium text-red-500 hover:text-white hover:bg-red-500 disabled:opacity-30 disabled:cursor-not-allowed transition-colors px-3 py-1.5 rounded-lg border border-red-300 hover:border-red-500"
         >
           全消去
         </button>
