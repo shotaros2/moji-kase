@@ -38,6 +38,22 @@ export default function Home() {
   const [wordStart, setWordStart] = useState(0)
   const [loading, setLoading] = useState(false)
   const [composing, setComposing] = useState(false)
+  const [copied, setCopied] = useState(false)
+
+  function clearAll() {
+    setText('')
+    setResult(null)
+    setCurrentWord('')
+    textareaRef.current?.focus()
+  }
+
+  async function copyText() {
+    try {
+      await navigator.clipboard.writeText(text)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    } catch {}
+  }
 
   useEffect(() => {
     try { localStorage.setItem('moji-kase-text', text) } catch {}
@@ -145,6 +161,16 @@ export default function Home() {
         </p>
       </div>
 
+      <div className="flex justify-end mb-1">
+        <button
+          onClick={clearAll}
+          disabled={!text}
+          className="text-xs text-red-400 hover:text-red-600 disabled:opacity-30 disabled:cursor-not-allowed transition-colors px-2 py-1 rounded hover:bg-red-50"
+        >
+          全消去
+        </button>
+      </div>
+
       <textarea
         ref={textareaRef}
         value={text}
@@ -225,9 +251,27 @@ export default function Home() {
         </div>
       )}
 
-      <div className="mt-4 text-right text-sm text-gray-400">
-        {text.length} 文字
+      <div className="mt-4 flex items-center justify-between text-sm text-gray-400">
+        <span>{text.length} 文字</span>
       </div>
+
+      {/* Output block */}
+      {text && (
+        <div className="mt-4">
+          <div className="flex items-center justify-between mb-1">
+            <p className="text-xs text-gray-400">作成した文章</p>
+            <button
+              onClick={copyText}
+              className="text-xs px-3 py-1 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 text-gray-500 transition-colors"
+            >
+              {copied ? '✓ コピー済み' : 'コピー'}
+            </button>
+          </div>
+          <pre className="w-full bg-gray-900 text-gray-100 rounded-xl px-4 py-3 text-sm leading-relaxed whitespace-pre-wrap break-all font-sans select-all">
+            {text}
+          </pre>
+        </div>
+      )}
     </main>
   )
 }
