@@ -59,14 +59,14 @@ export default function Home() {
   // ハイドレーション後にlocalStorageから復元
   useEffect(() => {
     try {
-      const saved = localStorage.getItem('moji-kase-text')
+      const saved = localStorage.getItem('mojinovi-text')
       if (saved) setText(saved)
     } catch {}
   }, [])
 
   // textが変わるたびに保存
   useEffect(() => {
-    try { localStorage.setItem('moji-kase-text', text) } catch {}
+    try { localStorage.setItem('mojinovi-text', text) } catch {}
   }, [text])
 
   const textareaRef = useRef<HTMLTextAreaElement>(null)
@@ -160,7 +160,7 @@ export default function Home() {
   return (
     <main className="max-w-2xl mx-auto px-4 py-10">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-800">文字数稼ぎ</h1>
+        <h1 className="text-2xl font-bold text-gray-800">モジノビ</h1>
         <p className="text-gray-400 text-sm mt-1">
           書きながら類語を自動検索 →&nbsp;
           <span className="sm:hidden">タップ</span>
