@@ -160,7 +160,7 @@ export default function Home() {
 
   return (
     <main className="max-w-2xl mx-auto px-4 py-10">
-      <div className="mb-6">
+      <div className="mb-6 text-center">
         <h1 className="text-6xl font-bold tracking-wide text-gray-900">モジノビ</h1>
         <p className="text-gray-400 text-sm mt-1">
           書きながら類語を自動検索 →&nbsp;
