@@ -161,7 +161,7 @@ export default function Home() {
   return (
     <main className="max-w-2xl mx-auto px-4 py-10">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-800">モジノビ</h1>
+        <h1 className="text-4xl font-extrabold tracking-tight text-gray-900">モジノビ</h1>
         <p className="text-gray-400 text-sm mt-1">
           書きながら類語を自動検索 →&nbsp;
           <span className="sm:hidden">タップ</span>
