@@ -29,7 +29,7 @@ export async function GET(request: NextRequest) {
       if (text && text !== word) wordSet.add(text)
     })
 
-    const words = [...wordSet]
+    const words = Array.from(wordSet)
 
     if (words.length === 0) {
       return NextResponse.json(
