@@ -30,15 +30,16 @@ function detectWord(
 }
 
 export default function Home() {
-  const [text, setText] = useState(() => {
-    try { return localStorage.getItem('moji-kase-text') ?? '' } catch { return '' }
-  })
+  const [text, setText] = useState('')
   const [result, setResult] = useState<Result | null>(null)
   const [currentWord, setCurrentWord] = useState('')
   const [wordStart, setWordStart] = useState(0)
   const [loading, setLoading] = useState(false)
   const [composing, setComposing] = useState(false)
   const [copied, setCopied] = useState(false)
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => { setMounted(true) }, [])
 
   function clearAll() {
     setText('')
@@ -55,6 +56,15 @@ export default function Home() {
     } catch {}
   }
 
+  // ハイドレーション後にlocalStorageから復元
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('moji-kase-text')
+      if (saved) setText(saved)
+    } catch {}
+  }, [])
+
+  // textが変わるたびに保存
   useEffect(() => {
     try { localStorage.setItem('moji-kase-text', text) } catch {}
   }, [text])
@@ -164,7 +174,7 @@ export default function Home() {
       <div className="flex justify-end mb-1">
         <button
           onClick={clearAll}
-          disabled={!text}
+          disabled={mounted ? !text : false}
           className="text-xs text-red-400 hover:text-red-600 disabled:opacity-30 disabled:cursor-not-allowed transition-colors px-2 py-1 rounded hover:bg-red-50"
         >
           全消去
@@ -256,7 +266,7 @@ export default function Home() {
       </div>
 
       {/* Output block */}
-      {text && (
+      {mounted && text && (
         <div className="mt-4">
           <div className="flex items-center justify-between mb-1">
             <p className="text-xs text-gray-400">作成した文章</p>
