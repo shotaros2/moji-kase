@@ -108,9 +108,10 @@ export default function Home() {
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-gray-800">文字数稼ぎ</h1>
         <p className="text-gray-400 text-sm mt-1">
-          文章を書きながらカーソル位置（または選択テキスト）の単語を自動検索 →&nbsp;
-          <kbd className="bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded text-xs font-mono">Tab</kbd>
-          &nbsp;で長い類語に置換
+          書きながら類語を自動検索 →&nbsp;
+          <span className="sm:hidden">タップ</span>
+          <span className="hidden sm:inline">タップ or <kbd className="bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded text-xs font-mono">Tab</kbd></span>
+          &nbsp;で長い表現に置換
         </p>
       </div>
 
@@ -137,16 +138,16 @@ export default function Home() {
             <span className="text-gray-500 text-sm shrink-0">「{currentWord}」→</span>
             <button
               onClick={() => accept(result.longest)}
-              className="text-blue-700 font-bold text-lg hover:text-blue-900 transition-colors truncate"
-              title={result.longest}
+              className="text-blue-700 font-bold text-lg hover:text-blue-900 active:scale-95 transition-all truncate underline decoration-dotted underline-offset-2"
+              title="タップ / Tab で置換"
             >
               {result.longest}
             </button>
             <span className="bg-green-100 text-green-700 text-xs font-semibold px-2 py-0.5 rounded-full shrink-0">
               +{result.diff}文字
             </span>
-            <span className="text-gray-300 text-xs ml-auto shrink-0 hidden sm:block">
-              Tab で置換
+            <span className="text-gray-300 text-xs ml-auto shrink-0">
+              <span className="hidden sm:inline">Tab /&nbsp;</span>タップ
             </span>
           </div>
         )}
