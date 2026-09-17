@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef, useCallback } from 'react'
+import { useState, useRef, useCallback, useEffect } from 'react'
 
 type Result = {
   word: string
@@ -30,12 +30,18 @@ function detectWord(
 }
 
 export default function Home() {
-  const [text, setText] = useState('')
+  const [text, setText] = useState(() => {
+    try { return localStorage.getItem('moji-kase-text') ?? '' } catch { return '' }
+  })
   const [result, setResult] = useState<Result | null>(null)
   const [currentWord, setCurrentWord] = useState('')
   const [wordStart, setWordStart] = useState(0)
   const [loading, setLoading] = useState(false)
   const [composing, setComposing] = useState(false)
+
+  useEffect(() => {
+    try { localStorage.setItem('moji-kase-text', text) } catch {}
+  }, [text])
 
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const debounceRef = useRef<ReturnType<typeof setTimeout>>()
