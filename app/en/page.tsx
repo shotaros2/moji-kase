@@ -76,10 +76,32 @@ export default function EnPage() {
     if (!word || word.length < 2) { setResult(null); return }
     setLoading(true)
     try {
-      const res = await fetch(`/api/search-en?word=${encodeURIComponent(word)}`)
-      if (!res.ok) { setResult(null); return }
-      const data: Result = await res.json()
-      setResult(data.diff > 0 ? data : null)
+      const [weblioSettled, synSettled] = await Promise.allSettled([
+        fetch(`/api/search-en?word=${encodeURIComponent(word)}`).then(r => r.ok ? r.json() as Promise<Result> : null),
+        Promise.all([
+          fetch(`https://api.datamuse.com/words?rel_syn=${encodeURIComponent(word)}&max=20`).then(r => r.ok ? r.json() as Promise<{ word: string }[]> : []),
+          fetch(`https://api.datamuse.com/words?ml=${encodeURIComponent(word)}&max=20`).then(r => r.ok ? r.json() as Promise<{ word: string }[]> : []),
+        ]).then(([syn, ml]) => [...(syn as { word: string }[]), ...(ml as { word: string }[])]),
+      ])
+
+      const weblio: Result | null = weblioSettled.status === 'fulfilled' ? weblioSettled.value : null
+
+      const synWords: string[] =
+        synSettled.status === 'fulfilled' && Array.isArray(synSettled.value)
+          ? (synSettled.value as { word: string }[])
+              .map(({ word: w }) => w)
+              .filter(w => /^[a-zA-Z][a-zA-Z\s\-']*$/.test(w) && w.toLowerCase() !== word.toLowerCase())
+          : []
+      const longerSyn = synWords.filter(w => w.length > word.length).sort((a, b) => b.length - a.length)
+      const datamuse: Result | null = longerSyn.length > 0
+        ? { word, longest: longerSyn[0], longestLength: longerSyn[0].length, originalLength: word.length, diff: longerSyn[0].length - word.length, candidates: longerSyn.slice(0, 10) }
+        : null
+
+      const best = ([weblio, datamuse] as (Result | null)[])
+        .filter((r): r is Result => r !== null && r.diff > 0)
+        .sort((a, b) => b.diff - a.diff)[0] ?? null
+
+      setResult(best)
     } catch {
       setResult(null)
     } finally {
