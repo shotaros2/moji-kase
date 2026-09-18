@@ -218,7 +218,7 @@ export default function EnPage() {
       )}
 
       <div className="mt-4 flex items-center justify-between text-sm text-gray-400">
-        <span>{text.length} characters</span>
+        <span>{text.trim() ? text.trim().split(/\s+/).length : 0} words</span>
       </div>
 
       {/* Output block */}
