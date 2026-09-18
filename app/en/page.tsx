@@ -31,6 +31,7 @@ function detectWord(
 export default function EnPage() {
   const [text, setText] = useState('')
   const [result, setResult] = useState<Result | null>(null)
+  const [predictions, setPredictions] = useState<string[]>([])
   const [currentWord, setCurrentWord] = useState('')
   const [wordStart, setWordStart] = useState(0)
   const [loading, setLoading] = useState(false)
@@ -44,6 +45,7 @@ export default function EnPage() {
     setText('')
     setResult(null)
     setCurrentWord('')
+    setPredictions([])
     textareaRef.current?.focus()
   }
 
@@ -68,6 +70,7 @@ export default function EnPage() {
 
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const debounceRef = useRef<ReturnType<typeof setTimeout>>()
+  const predictDebounceRef = useRef<ReturnType<typeof setTimeout>>()
 
   const fetchSuggestion = useCallback(async (word: string) => {
     if (!word || word.length < 2) { setResult(null); return }
@@ -84,11 +87,43 @@ export default function EnPage() {
     }
   }, [])
 
+  const fetchPredictions = useCallback(async (word: string) => {
+    if (!word || word.length < 2) { setPredictions([]); return }
+    try {
+      // Prefix completions + related words in parallel
+      const [compRes, relRes] = await Promise.all([
+        fetch(`https://api.datamuse.com/words?sp=${encodeURIComponent(word)}*&max=8`),
+        fetch(`https://api.datamuse.com/words?ml=${encodeURIComponent(word)}&max=8`),
+      ])
+      const [compData, relData]: { word: string }[][] = await Promise.all([
+        compRes.ok ? compRes.json() : Promise.resolve([]),
+        relRes.ok ? relRes.json() : Promise.resolve([]),
+      ])
+      const seen = new Set<string>([word.toLowerCase()])
+      const merged: string[] = []
+      for (const { word: w } of [...compData, ...relData]) {
+        const lw = w.toLowerCase()
+        if (!seen.has(lw) && /^[a-zA-Z'-]+$/.test(w)) {
+          seen.add(lw)
+          merged.push(w)
+          if (merged.length >= 10) break
+        }
+      }
+      setPredictions(merged)
+    } catch {
+      setPredictions([])
+    }
+  }, [])
+
   function scheduleSearch(word: string, start: number, delay = 500) {
     setCurrentWord(word)
     setWordStart(start)
     clearTimeout(debounceRef.current)
-    if (!word) { setResult(null); return }
+    clearTimeout(predictDebounceRef.current)
+    if (!word) { setResult(null); setPredictions([]); return }
+    // Predictions: fast (250ms)
+    predictDebounceRef.current = setTimeout(() => fetchPredictions(word), 250)
+    // Synonym search: slower (500ms)
     debounceRef.current = setTimeout(() => fetchSuggestion(word), delay)
   }
 
@@ -113,6 +148,7 @@ export default function EnPage() {
     const next = before + after
     setText(next)
     setResult(null)
+    setPredictions([])
     setCurrentWord('')
     setTimeout(() => {
       ta.focus()
@@ -164,7 +200,25 @@ export default function EnPage() {
         autoFocus
       />
 
-      {/* Suggestion bar */}
+      {/* Predictions row */}
+      {predictions.length > 0 && (
+        <div className="mt-2">
+          <p className="text-xs text-gray-400 mb-1.5">Predictions</p>
+          <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
+            {predictions.map((w) => (
+              <button
+                key={w}
+                onClick={() => accept(w)}
+                className="text-sm text-gray-700 bg-white border border-gray-200 rounded-lg px-3 py-1.5 whitespace-nowrap hover:bg-purple-50 hover:text-purple-700 hover:border-purple-200 active:scale-95 transition-all shrink-0"
+              >
+                {w}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Synonym suggestion bar */}
       <div className="mt-2 min-h-[3.5rem] flex items-center">
         {loading && (
           <p className="text-sm text-gray-400 animate-pulse">Searching…</p>
@@ -198,7 +252,7 @@ export default function EnPage() {
         )}
       </div>
 
-      {/* Candidates */}
+      {/* Other synonym candidates */}
       {result && result.candidates.length > 1 && (
         <div className="mt-3 bg-white border border-gray-100 rounded-xl p-3 shadow-sm">
           <p className="text-xs text-gray-400 mb-2">Other candidates</p>
