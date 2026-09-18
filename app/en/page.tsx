@@ -182,7 +182,7 @@ export default function EnPage() {
               {result.longest}
             </button>
             <span className="bg-green-100 text-green-700 text-xs font-semibold px-2 py-0.5 rounded-full shrink-0">
-              +{result.diff} chars
+              +{result.diff} {result.diff === 1 ? 'word' : 'words'}
             </span>
             <span className="text-gray-300 text-xs ml-auto shrink-0">
               <span className="hidden sm:inline">Tab /&nbsp;</span>Tap
@@ -210,7 +210,7 @@ export default function EnPage() {
                 className="text-sm text-gray-600 bg-gray-50 hover:bg-blue-50 hover:text-blue-700 border border-gray-200 rounded-lg px-3 py-1 transition-colors"
               >
                 {w}
-                <span className="text-gray-400 text-xs ml-1">{w.length}</span>
+                <span className="text-gray-400 text-xs ml-1">{w.trim().split(/\s+/).length}w</span>
               </button>
             ))}
           </div>

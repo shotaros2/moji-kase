@@ -39,14 +39,18 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    const sorted = words.sort((a, b) => b.length - a.length)
+    const wordCount = (s: string) => s.trim().split(/\s+/).length
+    const sorted = words.sort(
+      (a, b) => wordCount(b) - wordCount(a) || b.length - a.length,
+    )
+    const originalWordCount = wordCount(word)
 
     return NextResponse.json({
       word,
       longest: sorted[0],
-      longestLength: sorted[0].length,
-      originalLength: word.length,
-      diff: sorted[0].length - word.length,
+      longestLength: wordCount(sorted[0]),
+      originalLength: originalWordCount,
+      diff: wordCount(sorted[0]) - originalWordCount,
       candidates: sorted.slice(0, 10),
     })
   } catch (err) {
