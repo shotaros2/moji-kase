@@ -143,17 +143,16 @@ export default function EnPage() {
   function accept(replacement: string) {
     const ta = textareaRef.current
     if (!ta) return
-    const before = text.substring(0, wordStart) + replacement
-    const after = text.substring(wordStart + currentWord.length)
+    const start = wordStart
+    const before = text.substring(0, start) + replacement
+    const after = text.substring(start + currentWord.length)
     const next = before + after
     setText(next)
-    setResult(null)
-    setPredictions([])
-    setCurrentWord('')
     setTimeout(() => {
       ta.focus()
       ta.selectionStart = ta.selectionEnd = before.length
     }, 0)
+    scheduleSearch(replacement, start, 500)
   }
 
   function handleKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
